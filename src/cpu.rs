@@ -61,6 +61,7 @@ impl CPU
 		let mut instr_set = [UNDEF_INSTR; 256];
 
 		instr_set[0x4C] = Option::Some(instr!(jmp, abs, 3, 3));
+		instr_set[0x86] = Option::Some(instr!(stx, zpg, 3, 2));
 		instr_set[0xA2] = Option::Some(instr!(ldx, imm, 2, 2));
 
 		CPU {

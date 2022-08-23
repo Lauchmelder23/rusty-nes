@@ -52,4 +52,9 @@ impl Cartridge
 	{
 		self.prg[(addr & 0x3FFF) as usize]
 	}
+
+	pub fn write_prg(&mut self, addr: u16, val: u8)
+	{
+		// nothing
+	}
 }

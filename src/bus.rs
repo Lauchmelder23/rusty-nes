@@ -24,16 +24,6 @@ impl Bus
 		}
 	}
 
-	pub fn run(&self)
-	{
-		let cpu = self.cpu.upgrade().unwrap();
-
-		loop
-		{
-			cpu.borrow_mut().cycle();
-		}
-	}
-
 	pub fn attach_cpu(&mut self, cpu: &Rc<RefCell<CPU>>)
 	{	
 		self.cpu = Rc::downgrade(cpu);
@@ -45,6 +35,17 @@ impl Bus
 		{
 			0..=0x1FFF 		=> self.ram[(addr & 0x7FF) as usize],
 			0x8000..=0xFFFF => self.cartridge.read_prg(addr & 0x7FFF),
+
+			_ => panic!("Tried to access invalid memory address {}", addr)
+		}
+	}
+
+	pub fn write_cpu(&mut self, addr: u16, val: u8) 
+	{
+		match addr 
+		{
+			0..=0x1FFF 		=> self.ram[(addr & 0x7FF) as usize] = val,
+			0x8000..=0xFFFF => self.cartridge.write_prg(addr & 0x7FFF, val),
 
 			_ => panic!("Tried to access invalid memory address {}", addr)
 		}

@@ -29,6 +29,9 @@ impl NES
 	{
 		self.cpu.borrow_mut().powerup();
 
-		self.bus.borrow().run();
+		loop
+		{
+			self.cpu.borrow_mut().cycle();
+		}
 	}
 }
