@@ -1,4 +1,4 @@
-use std::{fs::{self, File}, io::{BufReader, Read}};
+use std::{fs::File, io::{BufReader, Read}};
 
 struct Header 
 {
@@ -6,6 +6,7 @@ struct Header
 	chr_blocks: u8
 }
 
+#[allow(dead_code)]
 pub struct Cartridge
 {
 	header: Header,

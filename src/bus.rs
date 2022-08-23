@@ -30,7 +30,7 @@ impl Bus
 
 		loop
 		{
-			cpu.borrow_mut().execute();
+			cpu.borrow_mut().cycle();
 		}
 	}
 

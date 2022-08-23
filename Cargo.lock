@@ -3,5 +3,14 @@
 version = 3
 
 [[package]]
+name = "copystr"
+version = "0.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "547ed93b8f3c851afaaf05fe51e49c31a735c098e9fd8d3fbcf572262bdc0d43"
+
+[[package]]
 name = "rusty-nes"
 version = "0.1.0"
+dependencies = [
+ "copystr",
+]

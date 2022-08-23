@@ -1,6 +1,8 @@
 mod nes;
 mod bus;
 mod cpu;
+mod instructions;
+mod addressing;
 mod cartridge;
 
 use nes::NES;
