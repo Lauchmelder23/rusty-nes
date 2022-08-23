@@ -41,6 +41,9 @@ impl CPU
 		self.x = 0;
 		self.y = 0;
 		self.sp = 0xFD;
+
+		// TODO: This is just for the nestest.nes
+		self.pc = 0xC000;
 	}
 
 	pub fn execute(&mut self)
@@ -51,7 +54,7 @@ impl CPU
 
 		match (opcode)
 		{
-			_ => panic!("Unimplemented opcode {}", opcode)
+			_ => panic!("Unimplemented opcode {:X}", opcode)
 		}
 	}
 }

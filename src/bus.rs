@@ -2,10 +2,12 @@ use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
 use crate::cpu::CPU;
+use crate::cartridge::Cartridge;
 
 pub struct Bus
 {
 	cpu: Weak<RefCell<CPU>>,
+	cartridge: Cartridge,
 
 	ram: Vec<u8>
 }
@@ -17,6 +19,7 @@ impl Bus
 		Bus 
 		{
 			cpu: Weak::new(),
+			cartridge: Cartridge::new("roms/nestest.nes"),
 			ram: vec![0; 0x800]
 		}
 	}
@@ -38,6 +41,12 @@ impl Bus
 
 	pub fn read_cpu(&self, addr: u16) -> u8 
 	{
-		self.ram[addr as usize]
+		match addr
+		{
+			0..=0x1FFF 		=> self.ram[(addr & 0x7FF) as usize],
+			0x8000..=0xFFFF => self.cartridge.read_prg(addr & 0x7FFF),
+
+			_ => panic!("Tried to access invalid memory address {}", addr)
+		}
 	}
 }
