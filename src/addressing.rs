@@ -25,6 +25,21 @@ impl CPU
 		print!("{: <30}", format!("#${:02X}", bus.borrow().read_cpu(self.absolute_addr)));
 	}
 
+	pub fn imp(&mut self)
+	{
+		print!("{: <30}", "");
+	}
+
+	pub fn rel(&mut self)
+	{
+		let bus = self.bus.upgrade().unwrap();
+		
+		self.relative_addr = bus.borrow().read_cpu(self.pc) as i8;
+		self.pc += 1;
+
+		print!("{: <30}", format!("${:02X}", self.relative_addr));
+	}
+
 	pub fn zpg(&mut self)
 	{
 		let bus = self.bus.upgrade().unwrap();
