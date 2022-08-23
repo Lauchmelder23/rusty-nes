@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs::{self, File}, io::{BufReader, Read}};
 
 struct Header 
 {
@@ -18,30 +18,30 @@ impl Cartridge
 {
 	pub fn new(filepath: &str) -> Cartridge 
 	{
-		let contents = fs::read(filepath).expect("Failed to load ROM");
-		let iter = contents.iter();
+		let fp = File::open(filepath).expect("Failed to load ROM");
+		let mut reader = BufReader::new(fp);
 
-		let mut curr_pos: usize = 0;
+		let mut header_data = vec![0u8; 16];
+		reader.read_exact(&mut header_data).expect("Header not present in ROM");
 
-		let header_data = &contents[curr_pos..curr_pos + 16];
 		let header = Header {
 			prg_blocks: header_data[4],
 			chr_blocks: header_data[5]
 		};
 
 		// TODO: For now assume there is no trainer
-		curr_pos = 16;
-		let prg_data = &contents[curr_pos..(curr_pos + 0x4000 * header.prg_blocks as usize)];
+		let mut prg_data = vec![0u8; 0x4000 * header.prg_blocks as usize];
+		let mut chr_data = vec![0u8; 0x2000 * header.chr_blocks as usize];
 
-		curr_pos += 0x4000 * header.prg_blocks as usize;
-		let chr_data = &contents[curr_pos..(curr_pos + 0x2000 * header.chr_blocks as usize)];
+		reader.read_exact(&mut prg_data).expect("ROM does not contain specified amount of PRG data");
+		reader.read_exact(&mut chr_data).expect("ROM does not contain specified amount of CHR data");
 
 		Cartridge 
 		{ 
 			header: header,
 
-			prg: prg_data.to_vec(), 
-			chr: chr_data.to_vec()
+			prg: prg_data, 
+			chr: chr_data
 		}
 	}
 
