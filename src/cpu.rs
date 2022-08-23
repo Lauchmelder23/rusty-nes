@@ -110,6 +110,8 @@ impl CPU
 		}
 
 		self.execute();
+
+		self.cycle -= 1;
 	}
 
 	fn execute(&mut self)
