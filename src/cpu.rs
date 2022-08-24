@@ -60,22 +60,31 @@ impl CPU
 		const UNDEF_INSTR: Option<Instruction> = None;
 		let mut instr_set = [UNDEF_INSTR; 256];
 
+		instr_set[0x08] = instr!(php, imp, 3, 1);
+		instr_set[0x09] = instr!(ora, imm, 2, 2);
+
 		instr_set[0x10] = instr!(bpl, rel, 2, 2);
 		instr_set[0x18] = instr!(clc, imp, 2, 1);
 
 		instr_set[0x20] = instr!(jsr, abs, 6, 3);
 		instr_set[0x24] = instr!(bit, zpg, 3, 2);
+		instr_set[0x28] = instr!(plp, imp, 4, 1);
+		instr_set[0x29] = instr!(and, imm, 2, 2);
 
 		instr_set[0x30] = instr!(bmi, rel, 2, 2);
 		instr_set[0x38] = instr!(sec, imp, 2, 1);
 
+		instr_set[0x48] = instr!(pha, imp, 3, 1);
+		instr_set[0x49] = instr!(eor, imm, 2, 2);
 		instr_set[0x4C] = instr!(jmp, abs, 3, 3);
 
 		instr_set[0x50] = instr!(bvc, rel, 2, 2);
 
 		instr_set[0x60] = instr!(rts, imp, 6, 1);
+		instr_set[0x68] = instr!(pla, imp, 4, 1);
 
 		instr_set[0x70] = instr!(bvs, rel, 2, 2);
+		instr_set[0x78] = instr!(sei, imp, 2, 1);
 
 		instr_set[0x85] = instr!(sta, zpg, 3, 2);
 		instr_set[0x86] = instr!(stx, zpg, 3, 2);
@@ -86,12 +95,17 @@ impl CPU
 		instr_set[0xA9] = instr!(lda, imm, 2, 2);
 		
 		instr_set[0xB0] = instr!(bcs, rel, 2, 2);
+		instr_set[0xB8] = instr!(clv, imp, 2, 1);
+
+		instr_set[0xC9] = instr!(cmp, imm, 2, 2);
 
 		instr_set[0xD0] = instr!(bne, rel, 2, 2);
+		instr_set[0xD8] = instr!(cld, imp, 2, 1);
 
 		instr_set[0xEA] = instr!(nop, imp, 2, 1);
 
 		instr_set[0xF0] = instr!(beq, rel, 2, 2);
+		instr_set[0xF8] = instr!(sed, imp, 2, 1);
 
 		CPU {
 			cycle: 0,

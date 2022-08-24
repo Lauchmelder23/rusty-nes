@@ -7,6 +7,7 @@ enum Bit
 {
 	Negative 	= 7,
 	Overflow 	= 6,
+	Break		= 4,
 	Decimal 	= 3,
 	Interrupt 	= 2,
 	Zero		= 1,
@@ -131,6 +132,22 @@ macro_rules! store_fn
 	};
 }
 
+macro_rules! cmp_fn
+{
+	($name: ident, $register: ident) => 
+	{
+		pub fn $name(&mut self)
+		{
+			let value = self.fetch();
+			let result = self.$register.wrapping_sub(value);
+
+			set_flag_to!(self.p, Bit::Zero, self.$register == value);
+			set_flag_to!(self.p, Bit::Carry, self.$register >= value);
+			set_flag_to!(self.p, Bit::Negative, (value >> 7) != 0);
+		}
+	}
+}
+
 impl CPU 
 {
 	fn fetch(&mut self) -> u8
@@ -150,6 +167,11 @@ impl CPU
 
 	set_flag_fn!(clc, Bit::Carry, false);
 	set_flag_fn!(sec, Bit::Carry, true);
+	set_flag_fn!(sei, Bit::Interrupt, true);
+	set_flag_fn!(cli, Bit::Interrupt, false);
+	set_flag_fn!(sed, Bit::Decimal, true);
+	set_flag_fn!(cld, Bit::Decimal, false);
+	set_flag_fn!(clv, Bit::Overflow, false);
 
 	load_fn!(lda, acc);
 	load_fn!(ldx, x);
@@ -159,6 +181,19 @@ impl CPU
 	store_fn!(stx, x);
 	store_fn!(sty, y);
 
+	cmp_fn!(cmp, acc);
+	cmp_fn!(cpx, x);
+	cmp_fn!(cpy, y);
+
+	pub fn and(&mut self)
+	{
+		let val = self.fetch();
+
+		self.acc &= val;
+		set_flag_to!(self.p, Bit::Negative, (self.acc & (1u8 << 7)) > 0);
+		set_flag_to!(self.p, Bit::Zero, self.acc == 0);
+	}
+
 	pub fn bit(&mut self)
 	{
 		let bus = self.bus.upgrade().unwrap();
@@ -167,6 +202,15 @@ impl CPU
 		set_flag_to!(self.p, Bit::Negative, (value >> 7) & 0x1);
 		set_flag_to!(self.p, Bit::Overflow, (value >> 6) & 0x1);
 		set_flag_to!(self.p, Bit::Zero, (self.acc & value) == 0);
+	}
+
+	pub fn eor(&mut self)
+	{
+		let val = self.fetch();
+
+		self.acc ^= val;
+		set_flag_to!(self.p, Bit::Negative, (self.acc & (1u8 << 7)) > 0);
+		set_flag_to!(self.p, Bit::Zero, self.acc == 0);
 	}
 
 	pub fn jmp(&mut self)
@@ -188,6 +232,54 @@ impl CPU
 	pub fn nop(&mut self)
 	{
 		
+	}
+
+	pub fn ora(&mut self)
+	{
+		let val = self.fetch();
+
+		self.acc |= val;
+		set_flag_to!(self.p, Bit::Negative, (self.acc & (1u8 << 7)) > 0);
+		set_flag_to!(self.p, Bit::Zero, self.acc == 0);
+	}
+
+	pub fn pha(&mut self)
+	{
+		let bus = self.bus.upgrade().unwrap();
+
+		push!(bus.borrow_mut(), self.sp, self.acc);
+	}
+
+	pub fn pla(&mut self)
+	{
+		let bus = self.bus.upgrade().unwrap();
+
+		self.acc = pop(bus.borrow(), &mut self.sp);
+		set_flag_to!(self.p, Bit::Negative, (self.acc & (1u8 << 7)) > 0);
+		set_flag_to!(self.p, Bit::Zero, self.acc == 0);
+	}
+
+
+	pub fn php(&mut self)
+	{
+		let bus = self.bus.upgrade().unwrap();
+
+		let mut value = self.p;
+		set_flag!(value, Bit::Break);
+		set_flag!(value, 5);
+
+		push!(bus.borrow_mut(), self.sp, value);
+	}
+
+	pub fn plp(&mut self)
+	{
+		let bus = self.bus.upgrade().unwrap();
+
+		let flag: u8 = pop(bus.borrow(), &mut self.sp);
+		let mask: u8 = 0b1100111;
+
+		self.p &= !mask;
+		self.p |= flag & mask;
 	}
 
 	pub fn rts(&mut self)
