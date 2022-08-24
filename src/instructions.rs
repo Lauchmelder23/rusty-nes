@@ -1,4 +1,6 @@
 use crate::cpu::CPU;
+use crate::bus::Bus;
+use std::cell::Ref;
 
 #[allow(dead_code)]
 enum Bit
@@ -52,6 +54,12 @@ macro_rules! push
 	}
 }
 
+fn pop(bus: Ref<Bus>, sp: &mut u8) -> u8 
+{
+	*sp += 1;
+	bus.read_cpu(0x0100 + *sp as u16)
+}
+
 macro_rules! branch
 {
 	($self: ident) => 
@@ -70,7 +78,7 @@ macro_rules! branch
 
 macro_rules! branch_on_fn
 {
-	($name: tt, $flag: expr, $result: literal) => 
+	($name: ident, $flag: expr, $result: literal) => 
 	{
 		pub fn $name(&mut self)
 		{
@@ -84,7 +92,7 @@ macro_rules! branch_on_fn
 
 macro_rules! set_flag_fn
 {
-	($name: tt, $flag: expr, $result: literal) => 
+	($name: ident, $flag: expr, $result: literal) => 
 	{
 		pub fn $name(&mut self)
 		{
@@ -99,7 +107,7 @@ macro_rules! set_flag_fn
 
 macro_rules! load_fn
 {
-	($name: tt, $register: ident) => 
+	($name: ident, $register: ident) => 
 	{
 		pub fn $name(&mut self) 
 		{
@@ -113,7 +121,7 @@ macro_rules! load_fn
 
 macro_rules! store_fn
 {
-	($name: tt, $register: ident) => 
+	($name: ident, $register: ident) => 
 	{
 		pub fn $name(&mut self) 
 		{
@@ -170,16 +178,26 @@ impl CPU
 	{
 		let bus = self.bus.upgrade().unwrap();
 
+		self.pc -= 1;
 		push!(bus.borrow_mut(), self.sp, self.pc >> 8);
 		push!(bus.borrow_mut(), self.sp, self.pc);
 
 		self.pc = self.absolute_addr;
 	}
 
-
-
 	pub fn nop(&mut self)
 	{
 		
+	}
+
+	pub fn rts(&mut self)
+	{
+		let bus = self.bus.upgrade().unwrap();
+
+		let lo = pop(bus.borrow(), &mut self.sp) as u16;
+		let hi = pop(bus.borrow(), &mut self.sp) as u16;
+
+		self.pc = (hi << 8) | lo;
+		self.pc += 1;
 	}
 }

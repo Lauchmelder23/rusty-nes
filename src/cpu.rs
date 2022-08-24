@@ -73,6 +73,8 @@ impl CPU
 
 		instr_set[0x50] = instr!(bvc, rel, 2, 2);
 
+		instr_set[0x60] = instr!(rts, imp, 6, 1);
+
 		instr_set[0x70] = instr!(bvs, rel, 2, 2);
 
 		instr_set[0x85] = instr!(sta, zpg, 3, 2);
