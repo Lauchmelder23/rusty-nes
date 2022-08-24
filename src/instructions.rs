@@ -132,6 +132,64 @@ macro_rules! store_fn
 	};
 }
 
+macro_rules! transfer_fn
+{
+	($name: ident, $from: ident, $to: ident) => 
+	{
+		pub fn $name(&mut self)
+		{
+			self.$to = self.$from;
+
+			match stringify!($to)
+			{
+				"sp" => {},
+				_ => {
+					set_flag_to!(self.p, Bit::Negative, (self.$to >> 7) == 0x01);
+					set_flag_to!(self.p, Bit::Zero, self.$to == 0);
+				}
+			};
+		}
+	}
+}
+
+macro_rules! inc_dec_fn
+{
+	($name: ident, $register: ident, $increment: literal) =>
+	{
+		pub fn $name(&mut self)
+		{
+			match $increment 
+			{
+				false 	=> self.$register = self.$register.wrapping_sub(1),
+				true 	=> self.$register = self.$register.wrapping_add(1)
+			}
+
+			set_flag_to!(self.p, Bit::Negative, (self.$register >> 7) == 1);
+			set_flag_to!(self.p, Bit::Zero, self.$register == 0);
+		}
+	};
+
+	($name: ident, $increment: literal) =>
+	{
+		pub fn $name(&mut self)
+		{
+			let bus = self.bus.upgrade().unwrap();
+			let mut value = self.fetch();
+
+			match $increment 
+			{
+				false 	=> value = value.wrapping_sub(1),
+				true 	=> value = value.wrapping_add(1)
+			}
+
+			set_flag_to!(self.p, Bit::Negative, (value >> 7) == 1);
+			set_flag_to!(self.p, Bit::Zero, value == 0);
+
+			bus.borrow_mut().write_cpu(self.absolute_addr, value);
+		}
+	};
+}
+
 macro_rules! cmp_fn
 {
 	($name: ident, $register: ident) => 
@@ -143,7 +201,7 @@ macro_rules! cmp_fn
 
 			set_flag_to!(self.p, Bit::Zero, self.$register == value);
 			set_flag_to!(self.p, Bit::Carry, self.$register >= value);
-			set_flag_to!(self.p, Bit::Negative, (value >> 7) != 0);
+			set_flag_to!(self.p, Bit::Negative, (result >> 7) != 0);
 		}
 	}
 }
@@ -156,22 +214,22 @@ impl CPU
 		return bus.borrow().read_cpu(self.absolute_addr);
 	}
 
-	branch_on_fn!(bcc, Bit::Carry, false);
-	branch_on_fn!(bcs, Bit::Carry, true);
-	branch_on_fn!(bne, Bit::Zero, false);
-	branch_on_fn!(beq, Bit::Zero, true);
-	branch_on_fn!(bpl, Bit::Negative, false);
-	branch_on_fn!(bmi, Bit::Negative, true);
-	branch_on_fn!(bvc, Bit::Overflow, false);
-	branch_on_fn!(bvs, Bit::Overflow, true);
+	branch_on_fn!(bcc, Bit::Carry, 		false);
+	branch_on_fn!(bcs, Bit::Carry, 		true);
+	branch_on_fn!(bne, Bit::Zero, 		false);
+	branch_on_fn!(beq, Bit::Zero, 		true);
+	branch_on_fn!(bpl, Bit::Negative, 	false);
+	branch_on_fn!(bmi, Bit::Negative, 	true);
+	branch_on_fn!(bvc, Bit::Overflow, 	false);
+	branch_on_fn!(bvs, Bit::Overflow, 	true);
 
-	set_flag_fn!(clc, Bit::Carry, false);
-	set_flag_fn!(sec, Bit::Carry, true);
-	set_flag_fn!(sei, Bit::Interrupt, true);
-	set_flag_fn!(cli, Bit::Interrupt, false);
-	set_flag_fn!(sed, Bit::Decimal, true);
-	set_flag_fn!(cld, Bit::Decimal, false);
-	set_flag_fn!(clv, Bit::Overflow, false);
+	set_flag_fn!(clc, Bit::Carry, 		false);
+	set_flag_fn!(sec, Bit::Carry, 		true);
+	set_flag_fn!(sei, Bit::Interrupt, 	true);
+	set_flag_fn!(cli, Bit::Interrupt, 	false);
+	set_flag_fn!(sed, Bit::Decimal, 	true);
+	set_flag_fn!(cld, Bit::Decimal, 	false);
+	set_flag_fn!(clv, Bit::Overflow, 	false);
 
 	load_fn!(lda, acc);
 	load_fn!(ldx, x);
@@ -181,9 +239,51 @@ impl CPU
 	store_fn!(stx, x);
 	store_fn!(sty, y);
 
+	transfer_fn!(tax, acc, x);
+	transfer_fn!(tay, acc, y);
+	transfer_fn!(tsx, sp, x);
+	transfer_fn!(txa, x, acc);
+	transfer_fn!(tya, y, acc);
+	transfer_fn!(txs, x, sp);
+
 	cmp_fn!(cmp, acc);
 	cmp_fn!(cpx, x);
 	cmp_fn!(cpy, y);
+
+	inc_dec_fn!(inc, 	true);
+	inc_dec_fn!(inx, x, true);
+	inc_dec_fn!(iny, y, true);
+
+	inc_dec_fn!(dec, 	false);
+	inc_dec_fn!(dex, x, false);
+	inc_dec_fn!(dey, y, false);
+
+
+	pub fn adc(&mut self)
+	{
+		let value = self.fetch() as u16;
+		let result = (self.acc as u16) + value + (test_flag!(self.p, Bit::Carry) as u16);
+
+		set_flag_to!(self.p, Bit::Carry, (result & 0xFF00) != 0x0000);
+		set_flag_to!(self.p, Bit::Negative, ((result >> 7) & 0x0001) == 0x0001);
+		set_flag_to!(self.p, Bit::Zero, (result & 0x00FF) == 0x0000);
+		set_flag_to!(self.p, Bit::Overflow, ((result ^ value) & (result ^ self.acc as u16) & 0x80) == 0x80);
+
+		self.acc = result as u8;
+	}
+
+	pub fn sbc(&mut self)
+	{
+		let value = !(self.fetch() as u16);
+		let result = (self.acc as u16).wrapping_add(value).wrapping_add(test_flag!(self.p, Bit::Carry) as u16);
+
+		set_flag_to!(self.p, Bit::Carry, (result & 0xFF00) == 0x0000);
+		set_flag_to!(self.p, Bit::Negative, ((result >> 7) & 0x0001) == 0x0001);
+		set_flag_to!(self.p, Bit::Zero, (result & 0x00FF) == 0x0000);
+		set_flag_to!(self.p, Bit::Overflow, ((result ^ value) & (result ^ self.acc as u16) & 0x80) == 0x80);
+
+		self.acc = result as u8;
+	}
 
 	pub fn and(&mut self)
 	{
@@ -259,7 +359,6 @@ impl CPU
 		set_flag_to!(self.p, Bit::Zero, self.acc == 0);
 	}
 
-
 	pub fn php(&mut self)
 	{
 		let bus = self.bus.upgrade().unwrap();
@@ -276,10 +375,26 @@ impl CPU
 		let bus = self.bus.upgrade().unwrap();
 
 		let flag: u8 = pop(bus.borrow(), &mut self.sp);
-		let mask: u8 = 0b1100111;
+		let mask: u8 = 0b11001111;
 
 		self.p &= !mask;
 		self.p |= flag & mask;
+	}
+
+	pub fn rti(&mut self)
+	{
+		let bus = self.bus.upgrade().unwrap();
+
+		let flag: u8 = pop(bus.borrow(), &mut self.sp);
+		let mask: u8 = 0b11001111;
+
+		self.p &= !mask;
+		self.p |= flag & mask;
+
+		let lo = pop(bus.borrow(), &mut self.sp) as u16;
+		let hi = pop(bus.borrow(), &mut self.sp) as u16;
+
+		self.pc = (hi << 8) | lo;
 	}
 
 	pub fn rts(&mut self)

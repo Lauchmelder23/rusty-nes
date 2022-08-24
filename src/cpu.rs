@@ -74,6 +74,7 @@ impl CPU
 		instr_set[0x30] = instr!(bmi, rel, 2, 2);
 		instr_set[0x38] = instr!(sec, imp, 2, 1);
 
+		instr_set[0x40] = instr!(rti, imp, 6, 1);
 		instr_set[0x48] = instr!(pha, imp, 3, 1);
 		instr_set[0x49] = instr!(eor, imm, 2, 2);
 		instr_set[0x4C] = instr!(jmp, abs, 3, 3);
@@ -82,26 +83,45 @@ impl CPU
 
 		instr_set[0x60] = instr!(rts, imp, 6, 1);
 		instr_set[0x68] = instr!(pla, imp, 4, 1);
-
+		instr_set[0x69] = instr!(adc, imm, 2, 2);
+		
 		instr_set[0x70] = instr!(bvs, rel, 2, 2);
 		instr_set[0x78] = instr!(sei, imp, 2, 1);
 
+		instr_set[0x84] = instr!(sty, zpg, 3, 2);
 		instr_set[0x85] = instr!(sta, zpg, 3, 2);
 		instr_set[0x86] = instr!(stx, zpg, 3, 2);
+		instr_set[0x88] = instr!(dey, imp, 2, 1);
+		instr_set[0x8A] = instr!(txa, imp, 2, 1);
+		instr_set[0x8E] = instr!(stx, abs, 4, 3);
 
 		instr_set[0x90] = instr!(bcc, rel, 2, 2);
+		instr_set[0x98] = instr!(tya, imp, 2, 1);
+		instr_set[0x9A] = instr!(txs, imp, 2, 1);
 
+		instr_set[0xA0] = instr!(ldy, imm, 2, 2);
 		instr_set[0xA2] = instr!(ldx, imm, 2, 2);
+		instr_set[0xA8] = instr!(tay, imp, 2, 1);
 		instr_set[0xA9] = instr!(lda, imm, 2, 2);
+		instr_set[0xAA] = instr!(tax, imp, 2, 1);
+		instr_set[0xAD] = instr!(lda, abs, 4, 3);
+		instr_set[0xAE] = instr!(ldx, abs, 4, 3);
 		
 		instr_set[0xB0] = instr!(bcs, rel, 2, 2);
 		instr_set[0xB8] = instr!(clv, imp, 2, 1);
+		instr_set[0xBA] = instr!(tsx, imp, 2, 1);
 
+		instr_set[0xC0] = instr!(cpy, imm, 2, 2);
+		instr_set[0xC8] = instr!(iny, imp, 2, 1);
 		instr_set[0xC9] = instr!(cmp, imm, 2, 2);
+		instr_set[0xCA] = instr!(dex, imp, 2, 1);
 
 		instr_set[0xD0] = instr!(bne, rel, 2, 2);
 		instr_set[0xD8] = instr!(cld, imp, 2, 1);
 
+		instr_set[0xE0] = instr!(cpx, imm, 2, 2);
+		instr_set[0xE8] = instr!(inx, imp, 2, 1);
+		instr_set[0xE9] = instr!(sbc, imm, 2, 2);
 		instr_set[0xEA] = instr!(nop, imp, 2, 1);
 
 		instr_set[0xF0] = instr!(beq, rel, 2, 2);
