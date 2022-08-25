@@ -1,4 +1,4 @@
-use crate::cpu::CPU;
+use crate::cpu::{CPU, FetchType};
 
 impl CPU
 {
@@ -12,7 +12,16 @@ impl CPU
 		self.pc += 2;
 		self.absolute_addr = (hi << 8) | lo;
 
+		self.fetch_type = FetchType::Mem;
+
 		print!("{: <30}", format!("${:04X}", self.absolute_addr));
+	}
+
+	pub fn acc(&mut self)
+	{
+		self.fetch_type = FetchType::Acc;
+
+		print!("{: <30}", "A");
 	}
 
 	pub fn imm(&mut self)
@@ -21,6 +30,8 @@ impl CPU
 
 		self.absolute_addr = self.pc;
 		self.pc += 1;
+
+		self.fetch_type = FetchType::Mem;
 
 		print!("{: <30}", format!("#${:02X}", bus.borrow().read_cpu(self.absolute_addr)));
 	}
@@ -46,6 +57,8 @@ impl CPU
 
 		self.absolute_addr = bus.borrow().read_cpu(self.pc) as u16;
 		self.pc += 1;
+
+		self.fetch_type = FetchType::Mem;
 
 		print!("{: <30}", format!("${:02X} = {:02X}", self.absolute_addr, bus.borrow().read_cpu(self.absolute_addr)))
 	}

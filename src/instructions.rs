@@ -1,4 +1,4 @@
-use crate::cpu::CPU;
+use crate::cpu::{CPU, FetchType};
 use crate::bus::Bus;
 use std::cell::Ref;
 
@@ -206,12 +206,74 @@ macro_rules! cmp_fn
 	}
 }
 
+macro_rules! bit_shift_carry
+{
+	($val: ident, <<) => { ($val & 0x80) == 0x80 };
+	($val: ident, >>) => { ($val & 0x01) == 0x01 };
+}
+
+macro_rules! handle_carry
+{
+	($val: ident, $carry: ident, <<) => { $val |= ($carry as u8); };
+	($val: ident, $carry: ident, >>) => { $val |= (($carry as u8) << 7); };
+}
+
+macro_rules! bit_shift_fn 
+{
+	($name: ident, $direction: tt, $rotate: literal) =>
+	{
+		pub fn $name(&mut self)
+		{
+			let mut val = self.fetch();
+
+			let carry = test_flag!(self.p, Bit::Carry);
+			set_flag_to!(self.p, Bit::Carry, bit_shift_carry!(val, $direction));
+
+			val = val $direction 1;
+			match $rotate
+			{
+				false => { },
+				true  => { handle_carry!(val, carry, $direction); }
+			};
+	
+			set_flag_to!(self.p, Bit::Zero, val == 0x00);
+			set_flag_to!(self.p, Bit::Negative, (val & 0x80) == 0x80);
+	
+			self.ditch(val);
+		}
+	}
+}
+
 impl CPU 
 {
 	fn fetch(&mut self) -> u8
 	{
-		let bus = self.bus.upgrade().unwrap();
-		return bus.borrow().read_cpu(self.absolute_addr);
+		match self.fetch_type
+		{
+			FetchType::Mem => {
+				let bus = self.bus.upgrade().unwrap();
+				return bus.borrow().read_cpu(self.absolute_addr);
+			},
+
+			FetchType::Acc => {
+				self.acc
+			}
+		}
+	}
+
+	fn ditch(&mut self, value: u8)
+	{
+		match self.fetch_type
+		{
+			FetchType::Mem => {
+				let bus = self.bus.upgrade().unwrap();
+				bus.borrow_mut().write_cpu(self.absolute_addr, value);
+			},
+
+			FetchType::Acc => {
+				self.acc = value;
+			}
+		}
 	}
 
 	branch_on_fn!(bcc, Bit::Carry, 		false);
@@ -257,6 +319,11 @@ impl CPU
 	inc_dec_fn!(dec, 	false);
 	inc_dec_fn!(dex, x, false);
 	inc_dec_fn!(dey, y, false);
+
+	bit_shift_fn!(asl, <<, false);
+	bit_shift_fn!(lsr, >>, false);
+	bit_shift_fn!(rol, <<, true);
+	bit_shift_fn!(ror, >>, true);
 
 
 	pub fn adc(&mut self)

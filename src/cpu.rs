@@ -34,12 +34,20 @@ macro_rules! instr
 	}
 }
 
+pub enum FetchType
+{
+	Acc,
+	Mem
+}
+
 pub struct CPU
 {
 	pub cycle: u8,
 	total_cycles: u64,
+
 	pub absolute_addr: u16,
 	pub relative_addr: i8,
+	pub fetch_type: FetchType,
 
 	pub acc: u8,
 	pub x: u8,
@@ -62,6 +70,7 @@ impl CPU
 
 		instr_set[0x08] = instr!(php, imp, 3, 1);
 		instr_set[0x09] = instr!(ora, imm, 2, 2);
+		instr_set[0x0A] = instr!(asl, acc, 2, 1);
 
 		instr_set[0x10] = instr!(bpl, rel, 2, 2);
 		instr_set[0x18] = instr!(clc, imp, 2, 1);
@@ -70,11 +79,13 @@ impl CPU
 		instr_set[0x24] = instr!(bit, zpg, 3, 2);
 		instr_set[0x28] = instr!(plp, imp, 4, 1);
 		instr_set[0x29] = instr!(and, imm, 2, 2);
+		instr_set[0x2A] = instr!(rol, acc, 2, 1);
 
 		instr_set[0x30] = instr!(bmi, rel, 2, 2);
 		instr_set[0x38] = instr!(sec, imp, 2, 1);
 
 		instr_set[0x40] = instr!(rti, imp, 6, 1);
+		instr_set[0x4A] = instr!(lsr, acc, 2, 1);
 		instr_set[0x48] = instr!(pha, imp, 3, 1);
 		instr_set[0x49] = instr!(eor, imm, 2, 2);
 		instr_set[0x4C] = instr!(jmp, abs, 3, 3);
@@ -84,6 +95,7 @@ impl CPU
 		instr_set[0x60] = instr!(rts, imp, 6, 1);
 		instr_set[0x68] = instr!(pla, imp, 4, 1);
 		instr_set[0x69] = instr!(adc, imm, 2, 2);
+		instr_set[0x6A] = instr!(ror, acc, 2, 1);
 		
 		instr_set[0x70] = instr!(bvs, rel, 2, 2);
 		instr_set[0x78] = instr!(sei, imp, 2, 1);
@@ -93,6 +105,7 @@ impl CPU
 		instr_set[0x86] = instr!(stx, zpg, 3, 2);
 		instr_set[0x88] = instr!(dey, imp, 2, 1);
 		instr_set[0x8A] = instr!(txa, imp, 2, 1);
+		instr_set[0x8D] = instr!(sta, abs, 4, 3);
 		instr_set[0x8E] = instr!(stx, abs, 4, 3);
 
 		instr_set[0x90] = instr!(bcc, rel, 2, 2);
@@ -101,6 +114,7 @@ impl CPU
 
 		instr_set[0xA0] = instr!(ldy, imm, 2, 2);
 		instr_set[0xA2] = instr!(ldx, imm, 2, 2);
+		instr_set[0xA5] = instr!(lda, zpg, 3, 2);
 		instr_set[0xA8] = instr!(tay, imp, 2, 1);
 		instr_set[0xA9] = instr!(lda, imm, 2, 2);
 		instr_set[0xAA] = instr!(tax, imp, 2, 1);
@@ -130,8 +144,10 @@ impl CPU
 		CPU {
 			cycle: 0,
 			total_cycles: 0,
+
 			absolute_addr: 0,
 			relative_addr: 0,
+			fetch_type: FetchType::Mem,
 
 			acc: 0,
 			x: 0,
