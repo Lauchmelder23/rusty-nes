@@ -206,7 +206,7 @@ macro_rules! cmp_fn
 	}
 }
 
-macro_rules! bit_shift_carry
+macro_rules! carry_condition
 {
 	($val: ident, <<) => { ($val & 0x80) == 0x80 };
 	($val: ident, >>) => { ($val & 0x01) == 0x01 };
@@ -218,7 +218,7 @@ macro_rules! handle_carry
 	($val: ident, $carry: ident, >>) => { $val |= (($carry as u8) << 7); };
 }
 
-macro_rules! bit_shift_fn 
+macro_rules! bitshift_fn 
 {
 	($name: ident, $direction: tt, $rotate: literal) =>
 	{
@@ -227,7 +227,7 @@ macro_rules! bit_shift_fn
 			let mut val = self.fetch();
 
 			let carry = test_flag!(self.p, Bit::Carry);
-			set_flag_to!(self.p, Bit::Carry, bit_shift_carry!(val, $direction));
+			set_flag_to!(self.p, Bit::Carry, carry_condition!(val, $direction));
 
 			val = val $direction 1;
 			match $rotate
@@ -320,10 +320,10 @@ impl CPU
 	inc_dec_fn!(dex, x, false);
 	inc_dec_fn!(dey, y, false);
 
-	bit_shift_fn!(asl, <<, false);
-	bit_shift_fn!(lsr, >>, false);
-	bit_shift_fn!(rol, <<, true);
-	bit_shift_fn!(ror, >>, true);
+	bitshift_fn!(asl, <<, false);
+	bitshift_fn!(lsr, >>, false);
+	bitshift_fn!(rol, <<, true);
+	bitshift_fn!(ror, >>, true);
 
 
 	pub fn adc(&mut self)
