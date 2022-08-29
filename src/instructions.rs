@@ -115,7 +115,7 @@ macro_rules! branch_on_fn
 {
 	($name: ident, $flag: expr, $result: literal) => 
 	{
-		pub fn $name(&mut self)
+		fn $name(&mut self)
 		{
 			if test_flag!(self.p, $flag) == $result
 			{
@@ -129,7 +129,7 @@ macro_rules! set_flag_fn
 {
 	($name: ident, $flag: expr, $result: literal) => 
 	{
-		pub fn $name(&mut self)
+		fn $name(&mut self)
 		{
 			match $result 
 			{
@@ -144,7 +144,7 @@ macro_rules! load_fn
 {
 	($name: ident, $register: ident) => 
 	{
-		pub fn $name(&mut self) 
+		fn $name(&mut self) 
 		{
 			self.$register = self.fetch();
 
@@ -158,7 +158,7 @@ macro_rules! store_fn
 {
 	($name: ident, $register: ident) => 
 	{
-		pub fn $name(&mut self) 
+		fn $name(&mut self) 
 		{
 			let bus = self.bus.upgrade().unwrap();
 			bus.borrow_mut().write_cpu(self.absolute_addr, self.$register);
@@ -172,7 +172,7 @@ macro_rules! transfer_fn
 {
 	($name: ident, $from: ident, $to: ident) => 
 	{
-		pub fn $name(&mut self)
+		fn $name(&mut self)
 		{
 			self.$to = self.$from;
 
@@ -192,7 +192,7 @@ macro_rules! inc_dec_fn
 {
 	($name: ident, $register: ident, $increment: literal) =>
 	{
-		pub fn $name(&mut self)
+		fn $name(&mut self)
 		{
 			match $increment 
 			{
@@ -207,7 +207,7 @@ macro_rules! inc_dec_fn
 
 	($name: ident, $increment: literal) =>
 	{
-		pub fn $name(&mut self)
+		fn $name(&mut self)
 		{
 			let bus = self.bus.upgrade().unwrap();
 			let mut value = self.fetch();
@@ -230,7 +230,7 @@ macro_rules! cmp_fn
 {
 	($name: ident, $register: ident) => 
 	{
-		pub fn $name(&mut self)
+		fn $name(&mut self)
 		{
 			let value = self.fetch();
 			let result = self.$register.wrapping_sub(value);
@@ -258,7 +258,7 @@ macro_rules! bitshift_fn
 {
 	($name: ident, $direction: tt, $rotate: literal) =>
 	{
-		pub fn $name(&mut self)
+		fn $name(&mut self)
 		{
 			let mut val = self.fetch();
 
@@ -278,6 +278,36 @@ macro_rules! bitshift_fn
 			self.ditch(val);
 		}
 	}
+}
+
+macro_rules! invoke_functions
+{
+	($self: ident, $func: ident) => ($self.$func());
+
+	($self: ident, $func: ident, $($next: ident),+) => (
+		$self.$func();
+		invoke_functions!($self, $($next),+);
+	)
+}
+
+macro_rules! combine_instructions
+{
+	($name: ident, no_additional_cycles, $($parts: ident),+) => 
+	{
+		fn $name(&mut self)
+		{
+			invoke_functions!(self, $($parts),+);
+			self.additional_cycles = 0;
+		}
+	};
+
+	($name: ident, $($parts: ident),+) => 
+	{
+		fn $name(&mut self)
+		{
+			invoke_functions!(self, $($parts),+);
+		}
+	};
 }
 
 impl CPU 
@@ -515,6 +545,25 @@ impl CPU
 	{
 		let bus = self.bus.upgrade().unwrap();
 	}
+
+	///// ILLEGAL OPCODES
+	
+	combine_instructions!(dcp, no_additional_cycles, dec, cmp);
+	combine_instructions!(lax, lda, ldx);
+	combine_instructions!(isc, no_additional_cycles, inc, sbc);
+	combine_instructions!(slo, no_additional_cycles, asl, ora);
+	combine_instructions!(rla, no_additional_cycles, rol, and);
+	combine_instructions!(sre, no_additional_cycles, lsr, eor);
+	combine_instructions!(rra, no_additional_cycles, ror, adc);
+
+	fn sax(&mut self)
+	{
+		let bus = self.bus.upgrade().unwrap();
+
+		bus.borrow_mut().write_cpu(self.absolute_addr, self.acc & self.x);
+
+		self.additional_cycles = 0;
+	}
 }
 
 
@@ -522,11 +571,11 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* 00 */ Option::None, //instr!(brk, imp, 7),
 		/* 01 */ instr!(ora, idx, 6),
 		/* 02 */ Option::None,
-		/* 03 */ Option::None,
+		/* 03 */ instr!(slo, idx, 8, true),
 		/* 04 */ instr!(nop, zpg, 3, true),
 		/* 05 */ instr!(ora, zpg, 3),
 		/* 06 */ instr!(asl, zpg, 5),
-		/* 07 */ Option::None,
+		/* 07 */ instr!(slo, zpg, 5, true),
 		/* 08 */ instr!(php, imp, 3),
 		/* 09 */ instr!(ora, imm, 2),
 		/* 0A */ instr!(asl, acc, 2),
@@ -534,33 +583,33 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* 0C */ instr!(nop, abs, 4, true),
 		/* 0D */ instr!(ora, abs, 4),
 		/* 0E */ instr!(asl, abs, 6),
-		/* 0F */ Option::None,
+		/* 0F */ instr!(slo, abs, 6, true),
 
 		/* 10 */ instr!(bpl, rel, 2),
 		/* 11 */ instr!(ora, idy, 5),
 		/* 12 */ Option::None,
-		/* 13 */ Option::None,
+		/* 13 */ instr!(slo, idy, 8, true),
 		/* 14 */ instr!(nop, zpx, 4, true),
 		/* 15 */ instr!(ora, zpx, 4),
 		/* 16 */ instr!(asl, zpx, 6),
-		/* 17 */ Option::None,
+		/* 17 */ instr!(slo, zpx, 6, true),
 		/* 18 */ instr!(clc, imp, 2),
 		/* 19 */ instr!(ora, aby, 4),
 		/* 1A */ instr!(nop, imp, 2, true),
-		/* 1B */ Option::None,
+		/* 1B */ instr!(slo, aby, 7, true),
 		/* 1C */ instr!(nop, abx, 4, true),
 		/* 1D */ instr!(ora, abx, 4),
 		/* 1E */ instr!(asl, abx, 7),
-		/* 1F */ Option::None,
+		/* 1F */ instr!(slo, abx, 7, true),
 
 		/* 20 */ instr!(jsr, abs, 6),
 		/* 21 */ instr!(and, idx, 6),
 		/* 22 */ Option::None,
-		/* 23 */ Option::None,
+		/* 23 */ instr!(rla, idx, 8, true),
 		/* 24 */ instr!(bit, zpg, 3),
 		/* 25 */ instr!(and, zpg, 3),
 		/* 26 */ instr!(rol, zpg, 5),
-		/* 27 */ Option::None,
+		/* 27 */ instr!(rla, zpg, 5, true),
 		/* 28 */ instr!(plp, imp, 4),
 		/* 29 */ instr!(and, imm, 2),
 		/* 2A */ instr!(rol, acc, 2),
@@ -568,33 +617,33 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* 2C */ instr!(bit, abs, 4),
 		/* 2D */ instr!(and, abs, 4),
 		/* 2E */ instr!(rol, abs, 6),
-		/* 2F */ Option::None,
+		/* 2F */ instr!(rla, abs, 6, true),
 
 		/* 30 */ instr!(bmi, rel, 2),
 		/* 31 */ instr!(and, idy, 5),
 		/* 32 */ Option::None,
-		/* 33 */ Option::None,
+		/* 33 */ instr!(rla, idy, 8, true),
 		/* 34 */ instr!(nop, zpx, 4, true),
 		/* 35 */ instr!(and, zpx, 4),
 		/* 36 */ instr!(rol, zpx, 6),
-		/* 37 */ Option::None,
+		/* 37 */ instr!(rla, zpx, 6, true),
 		/* 38 */ instr!(sec, imp, 2),
 		/* 39 */ instr!(and, aby, 4),
 		/* 3A */ instr!(nop, imp, 2, true),
-		/* 3B */ Option::None,
+		/* 3B */ instr!(rla, aby, 7, true),
 		/* 3C */ instr!(nop, abx, 4, true),
 		/* 3D */ instr!(and, abx, 4),
 		/* 3E */ instr!(rol, abx, 7),
-		/* 3F */ Option::None,
+		/* 3F */ instr!(rla, abx, 7, true),
 
 		/* 40 */ instr!(rti, imp, 6),
 		/* 41 */ instr!(eor, idx, 6),
 		/* 42 */ Option::None,
-		/* 43 */ Option::None,
+		/* 43 */ instr!(sre, idx, 8, true),
 		/* 44 */ instr!(nop, zpg, 3, true),
 		/* 45 */ instr!(eor, zpg, 3),
 		/* 46 */ instr!(lsr, zpg, 5),
-		/* 47 */ Option::None,
+		/* 47 */ instr!(sre, zpg, 5, true),
 		/* 48 */ instr!(pha, imp, 3),
 		/* 49 */ instr!(eor, imm, 2),
 		/* 4A*/  instr!(lsr, acc, 2),
@@ -602,33 +651,33 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* 4C */ instr!(jmp, abs, 3),
 		/* 4D */ instr!(eor, abs, 4),
 		/* 4E */ instr!(lsr, abs, 6),
-		/* 4F */ Option::None,
+		/* 4F */ instr!(sre, abs, 6, true),
 
 		/* 50 */ instr!(bvc, rel, 2),
 		/* 51 */ instr!(eor, idy, 5),
 		/* 52 */ Option::None,
-		/* 53 */ Option::None,
+		/* 53 */ instr!(sre, idy, 8, true),
 		/* 54 */ instr!(nop, zpx, 4, true),
 		/* 55 */ instr!(eor, zpx, 4),
 		/* 56 */ instr!(lsr, zpx, 6),
-		/* 57 */ Option::None,
-		/* 58 */ Option::None,
+		/* 57 */ instr!(sre, zpx, 6, true),
+		/* 58 */ instr!(sre, aby, 7, true),
 		/* 59 */ instr!(eor, aby, 4),
 		/* 5A */ instr!(nop, imp, 2, true),
-		/* 5B */ Option::None,
+		/* 5B */ instr!(sre, aby, 7, true),
 		/* 5C */ instr!(nop, abx, 4, true),
 		/* 5D */ instr!(eor, abx, 4),
 		/* 5E */ instr!(lsr, abx, 7),
-		/* 5F */ Option::None,
+		/* 5F */ instr!(sre, abx, 7, true),
 
 		/* 60 */ instr!(rts, imp, 6),
 		/* 61 */ instr!(adc, idx, 6),
 		/* 62 */ Option::None,
-		/* 63 */ Option::None,
+		/* 63 */ instr!(rra, idx, 8, true),
 		/* 64 */ instr!(nop, zpg, 3, true),
 		/* 65 */ instr!(adc, zpg, 3),
 		/* 66 */ instr!(ror, zpg, 5),
-		/* 67 */ Option::None,
+		/* 67 */ instr!(rra, zpg, 5, true),
 		/* 68 */ instr!(pla, imp, 4),
 		/* 69 */ instr!(adc, imm, 2),
 		/* 6A */ instr!(ror, acc, 2),
@@ -636,33 +685,33 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* 6C */ instr!(jmp, ind, 5),
 		/* 6D */ instr!(adc, abs, 4),
 		/* 6E */ instr!(ror, abs, 6),
-		/* 6F */ Option::None,
+		/* 6F */ instr!(rra, abs, 6, true),
 		
 		/* 70 */ instr!(bvs, rel, 2),
 		/* 71 */ instr!(adc, idy, 5),
 		/* 72 */ Option::None,
-		/* 73 */ Option::None,
+		/* 73 */ instr!(rra, idy, 8, true),
 		/* 74 */ instr!(nop, zpx, 4, true),
 		/* 75 */ instr!(adc, zpx, 4),
 		/* 76 */ instr!(ror, zpx, 6),
-		/* 77 */ Option::None,
+		/* 77 */ instr!(rra, zpx, 6, true),
 		/* 78 */ instr!(sei, imp, 2),
 		/* 79 */ instr!(adc, aby, 4),
 		/* 7A */ instr!(nop, imp, 2, true),
-		/* 7B */ Option::None,
+		/* 7B */ instr!(rra, aby, 7, true),
 		/* 7C */ instr!(nop, abx, 4, true),
 		/* 7D */ instr!(adc, abx, 4),
 		/* 7E */ instr!(ror, abx, 7),
-		/* 7F */ Option::None,
+		/* 7F */ instr!(rra, abx, 7, true),
 
 		/* 80 */ instr!(nop, imm, 2, true),
 		/* 81 */ instr!(sta, idx, 6),
 		/* 82 */ instr!(nop, imm, 2, true),
-		/* 83 */ Option::None,
+		/* 83 */ instr!(sax, idx, 6, true),
 		/* 84 */ instr!(sty, zpg, 3),
 		/* 85 */ instr!(sta, zpg, 3),
 		/* 86 */ instr!(stx, zpg, 3),
-		/* 87 */ Option::None,
+		/* 87 */ instr!(sax, zpg, 3, true),
 		/* 88 */ instr!(dey, imp, 2),
 		/* 89 */ instr!(nop, imm, 2, true),
 		/* 8A */ instr!(txa, imp, 2),
@@ -670,7 +719,7 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* 8C */ instr!(sty, abs, 4),
 		/* 8D */ instr!(sta, abs, 4),
 		/* 8E */ instr!(stx, abs, 4),
-		/* 8F */ Option::None,
+		/* 8F */ instr!(sax, abs, 4, true),
 
 		/* 90 */ instr!(bcc, rel, 2),
 		/* 91 */ instr!(sta, idy, 6),
@@ -679,7 +728,7 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* 94 */ instr!(sty, zpx, 4),
 		/* 95 */ instr!(sta, zpx, 4),
 		/* 96 */ instr!(stx, zpy, 4),
-		/* 97 */ Option::None,
+		/* 97 */ instr!(sax, zpy, 4, true),
 		/* 98 */ instr!(tya, imp, 2),
 		/* 99 */ instr!(sta, aby, 5),
 		/* 9A */ instr!(txs, imp, 2),
@@ -692,11 +741,11 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* A0 */ instr!(ldy, imm, 2),
 		/* A1 */ instr!(lda, idx, 6),
 		/* A2 */ instr!(ldx, imm, 2),
-		/* A3 */ Option::None,
+		/* A3 */ instr!(lax, idx, 6, true),
 		/* A4 */ instr!(ldy, zpg, 3),
 		/* A5 */ instr!(lda, zpg, 3),
 		/* A6 */ instr!(ldx, zpg, 3),
-		/* A7 */ Option::None,
+		/* A7 */ instr!(lax, zpg, 3, true),
 		/* A8 */ instr!(tay, imp, 2),
 		/* A9 */ instr!(lda, imm, 2),
 		/* AA */ instr!(tax, imp, 2),
@@ -704,16 +753,16 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* AC */ instr!(ldy, abs, 4),
 		/* AD */ instr!(lda, abs, 4),
 		/* AE */ instr!(ldx, abs, 4),
-		/* AF */ Option::None,
+		/* AF */ instr!(lax, abs, 4, true),
 		
 		/* B0 */ instr!(bcs, rel, 2),
 		/* B1 */ instr!(lda, idy, 5),
 		/* B2 */ Option::None,
-		/* B3 */ Option::None,
+		/* B3 */ instr!(lax, idy, 5, true),
 		/* B4 */ instr!(ldy, zpx, 4),
 		/* B5 */ instr!(lda, zpx, 4),
 		/* B6 */ instr!(ldx, zpy, 4),
-		/* B7 */ Option::None,
+		/* B7 */ instr!(lax, zpy, 4, true),
 		/* B8 */ instr!(clv, imp, 2),
 		/* B9 */ instr!(lda, aby, 4),
 		/* BA */ instr!(tsx, imp, 2),
@@ -721,16 +770,16 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* BC */ instr!(ldy, abx, 4),
 		/* BD */ instr!(lda, abx, 4),
 		/* BE */ instr!(ldx, aby, 4),
-		/* BF */ Option::None,
+		/* BF */ instr!(lax, aby, 4, true),
 
 		/* C0 */ instr!(cpy, imm, 2),
 		/* C1 */ instr!(cmp, idx, 6),
 		/* C2 */ instr!(nop, imm, 2, true),
-		/* C3 */ Option::None,
+		/* C3 */ instr!(dcp, idx, 8, true),
 		/* C4 */ instr!(cpy, zpg, 3),
 		/* C5 */ instr!(cmp, zpg, 3),
 		/* C6 */ instr!(dec, zpg, 5),
-		/* C7 */ Option::None,
+		/* C7 */ instr!(dcp, zpg, 5, true),
 		/* C8 */ instr!(iny, imp, 2),
 		/* C9 */ instr!(cmp, imm, 2),
 		/* CA */ instr!(dex, imp, 2),
@@ -738,56 +787,56 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* CC */ instr!(cpy, abs, 4),
 		/* CD */ instr!(cmp, abs, 4),
 		/* CE */ instr!(dec, abs, 6),
-		/* CF */ Option::None,
+		/* CF */ instr!(dcp, abs, 6, true),
 
 		/* D0 */ instr!(bne, rel, 2),
 		/* D1 */ instr!(cmp, idy, 5),
 		/* D2 */ Option::None,
-		/* D3 */ Option::None,
+		/* D3 */ instr!(dcp, idy, 8, true),
 		/* D4 */ instr!(nop, zpx, 4, true),
 		/* D5 */ instr!(cmp, zpx, 4),
 		/* D6 */ instr!(dec, zpx, 6),
-		/* D7 */ Option::None,
+		/* D7 */ instr!(dcp, zpx, 6, true),
 		/* D8 */ instr!(cld, imp, 2),
 		/* D9 */ instr!(cmp, aby, 4),
 		/* DA */ instr!(nop, imp, 2, true),
-		/* DB */ Option::None,
+		/* DB */ instr!(dcp, aby, 7, true),
 		/* DC */ instr!(nop, abx, 4, true),
 		/* DD */ instr!(cmp, abx, 4),
 		/* DE */ instr!(dec, abx, 7),
-		/* DF */ Option::None,
+		/* DF */ instr!(dcp, abx, 7, true),
 
 		/* E0 */ instr!(cpx, imm, 2),
 		/* E1 */ instr!(sbc, idx, 6),
 		/* E2 */ instr!(nop, imm, 2, true),
-		/* E3 */ Option::None,
+		/* E3 */ instr!(isc, idx, 8, true),
 		/* E4 */ instr!(cpx, zpg, 3),
 		/* E5 */ instr!(sbc, zpg, 3),
 		/* E6 */ instr!(inc, zpg, 5),
-		/* E7 */ Option::None,
+		/* E7 */ instr!(isc, zpg, 5, true),
 		/* E8 */ instr!(inx, imp, 2),
 		/* E9 */ instr!(sbc, imm, 2),
 		/* EA */ instr!(nop, imp, 2),
-		/* EB */ Option::None,
+		/* EB */ instr!(sbc, imm, 2, true),
 		/* EC */ instr!(cpx, abs, 4),
 		/* ED */ instr!(sbc, abs, 4),
 		/* EE */ instr!(inc, abs, 6),
-		/* EF */ Option::None,
+		/* EF */ instr!(isc, abs, 6, true),
 
 		/* F0 */ instr!(beq, rel, 2),
 		/* F1 */ instr!(sbc, idy, 5),
 		/* F2 */ Option::None,
-		/* F3 */ Option::None,
+		/* F3 */ instr!(isc, idy, 8, true),
 		/* F4 */ instr!(nop, zpx, 4, true),
 		/* F5 */ instr!(sbc, zpx, 4),
 		/* F6 */ instr!(inc, zpx, 6),
-		/* F7 */ Option::None,
+		/* F7 */ instr!(isc, zpx, 6, true),
 		/* F8 */ instr!(sed, imp, 2),
 		/* F9 */ instr!(sbc, aby, 4),
 		/* FA */ instr!(nop, imp, 2, true),
-		/* FB */ Option::None,
+		/* FB */ instr!(isc, aby, 7, true),
 		/* FC */ instr!(nop, abx, 4, true),
 		/* FD */ instr!(sbc, abx, 4),
 		/* FE */ instr!(inc, abx, 7),
-		/* FF */ Option::None
+		/* FF */ instr!(isc, abx, 7, true),
 ];
