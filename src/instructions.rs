@@ -392,6 +392,24 @@ impl CPU
 		set_flag_to!(self.p, Bit::Zero, self.acc == 0);
 	}
 
+	fn eor(&mut self)
+	{
+		let val = self.fetch();
+
+		self.acc ^= val;
+		set_flag_to!(self.p, Bit::Negative, (self.acc & (1u8 << 7)) > 0);
+		set_flag_to!(self.p, Bit::Zero, self.acc == 0);
+	}
+
+	fn ora(&mut self)
+	{
+		let val = self.fetch();
+
+		self.acc |= val;
+		set_flag_to!(self.p, Bit::Negative, (self.acc & (1u8 << 7)) > 0);
+		set_flag_to!(self.p, Bit::Zero, self.acc == 0);
+	}
+
 	fn bit(&mut self)
 	{
 		let bus = self.bus.upgrade().unwrap();
@@ -402,14 +420,6 @@ impl CPU
 		set_flag_to!(self.p, Bit::Zero, (self.acc & value) == 0);
 	}
 
-	fn eor(&mut self)
-	{
-		let val = self.fetch();
-
-		self.acc ^= val;
-		set_flag_to!(self.p, Bit::Negative, (self.acc & (1u8 << 7)) > 0);
-		set_flag_to!(self.p, Bit::Zero, self.acc == 0);
-	}
 
 	fn jmp(&mut self)
 	{
@@ -430,15 +440,6 @@ impl CPU
 	fn nop(&mut self)
 	{
 		
-	}
-
-	fn ora(&mut self)
-	{
-		let val = self.fetch();
-
-		self.acc |= val;
-		set_flag_to!(self.p, Bit::Negative, (self.acc & (1u8 << 7)) > 0);
-		set_flag_to!(self.p, Bit::Zero, self.acc == 0);
 	}
 
 	fn pha(&mut self)
@@ -505,11 +506,16 @@ impl CPU
 		self.pc = (hi << 8) | lo;
 		self.pc += 1;
 	}
+
+	fn brk(&mut self) 
+	{
+		let bus = self.bus.upgrade().unwrap();
+	}
 }
 
 
 pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
-		/* 00 */ Option::None,
+		/* 00 */ Option::None, //instr!(brk, imp, 7),
 		/* 01 */ instr!(ora, idx, 6),
 		/* 02 */ Option::None,
 		/* 03 */ Option::None,
@@ -527,7 +533,7 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* 0F */ Option::None,
 
 		/* 10 */ instr!(bpl, rel, 2),
-		/* 11 */ Option::None,
+		/* 11 */ instr!(ora, idy, 5),
 		/* 12 */ Option::None,
 		/* 13 */ Option::None,
 		/* 14 */ Option::None,
@@ -535,13 +541,13 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* 16 */ Option::None,
 		/* 17 */ Option::None,
 		/* 18 */ instr!(clc, imp, 2),
-		/* 09 */ Option::None,
-		/* 0A */ Option::None,
-		/* 0B */ Option::None,
-		/* 0C */ Option::None,
-		/* 0D */ Option::None,
-		/* 0E */ Option::None,
-		/* 0F */ Option::None,
+		/* 19 */ instr!(ora, aby, 4),
+		/* 1A */ Option::None,
+		/* 1B */ Option::None,
+		/* 1C */ Option::None,
+		/* 1D */ Option::None,
+		/* 1E */ Option::None,
+		/* 1F */ Option::None,
 
 		/* 20 */ instr!(jsr, abs, 6),
 		/* 21 */ instr!(and, idx, 6),
@@ -561,7 +567,7 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* 2F */ Option::None,
 
 		/* 30 */ instr!(bmi, rel, 2),
-		/* 31 */ Option::None,
+		/* 31 */ instr!(and, idy, 5),
 		/* 32 */ Option::None,
 		/* 33 */ Option::None,
 		/* 34 */ Option::None,
@@ -595,7 +601,7 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* 4F */ Option::None,
 
 		/* 50 */ instr!(bvc, rel, 2),
-		/* 51 */ Option::None,
+		/* 51 */ instr!(eor, idy, 5),
 		/* 52 */ Option::None,
 		/* 53 */ Option::None,
 		/* 54 */ Option::None,
@@ -623,13 +629,13 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* 69 */ instr!(adc, imm, 2),
 		/* 6A */ instr!(ror, acc, 2),
 		/* 6B */ Option::None,
-		/* 6C */ Option::None,
+		/* 6C */ instr!(jmp, ind, 5),
 		/* 6D */ instr!(adc, abs, 4),
 		/* 6E */ instr!(ror, abs, 6),
 		/* 6F */ Option::None,
 		
 		/* 70 */ instr!(bvs, rel, 2),
-		/* 71 */ Option::None,
+		/* 71 */ instr!(adc, idy, 5),
 		/* 72 */ Option::None,
 		/* 73 */ Option::None,
 		/* 74 */ Option::None,
@@ -663,7 +669,7 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* 8F */ Option::None,
 
 		/* 90 */ instr!(bcc, rel, 2),
-		/* 91 */ Option::None,
+		/* 91 */ instr!(sta, idy, 6),
 		/* 92 */ Option::None,
 		/* 93 */ Option::None,
 		/* 94 */ Option::None,
@@ -705,7 +711,7 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* B6 */ Option::None,
 		/* B7 */ Option::None,
 		/* B8 */ instr!(clv, imp, 2),
-		/* B9 */ Option::None,
+		/* B9 */ instr!(lda, aby, 4),
 		/* BA */ instr!(tsx, imp, 2),
 		/* BB */ Option::None,
 		/* BC */ Option::None,
@@ -731,7 +737,7 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* CF */ Option::None,
 
 		/* D0 */ instr!(bne, rel, 2),
-		/* D1 */ Option::None,
+		/* D1 */ instr!(cmp, idy, 5),
 		/* D2 */ Option::None,
 		/* D3 */ Option::None,
 		/* D4 */ Option::None,
@@ -765,7 +771,7 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* EF */ Option::None,
 
 		/* F0 */ instr!(beq, rel, 2),
-		/* F1 */ Option::None,
+		/* F1 */ instr!(sbc, idy, 5),
 		/* F2 */ Option::None,
 		/* F3 */ Option::None,
 		/* F4 */ Option::None,
