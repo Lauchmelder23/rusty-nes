@@ -523,7 +523,7 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* 0B */ Option::None,
 		/* 0C */ Option::None,
 		/* 0D */ instr!(ora, abs, 4),
-		/* 0E */ Option::None,
+		/* 0E */ instr!(asl, abs, 6),
 		/* 0F */ Option::None,
 
 		/* 10 */ instr!(bpl, rel, 2),
@@ -557,7 +557,7 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* 2B */ Option::None,
 		/* 2C */ instr!(bit, abs, 4),
 		/* 2D */ instr!(and, abs, 4),
-		/* 2E */ Option::None,
+		/* 2E */ instr!(rol, abs, 6),
 		/* 2F */ Option::None,
 
 		/* 30 */ instr!(bmi, rel, 2),
@@ -591,7 +591,7 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* 4B */ Option::None,
 		/* 4C */ instr!(jmp, abs, 3),
 		/* 4D */ instr!(eor, abs, 4),
-		/* 4E */ Option::None,
+		/* 4E */ instr!(lsr, abs, 6),
 		/* 4F */ Option::None,
 
 		/* 50 */ instr!(bvc, rel, 2),
@@ -625,7 +625,7 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* 6B */ Option::None,
 		/* 6C */ Option::None,
 		/* 6D */ instr!(adc, abs, 4),
-		/* 6E */ Option::None,
+		/* 6E */ instr!(ror, abs, 6),
 		/* 6F */ Option::None,
 		
 		/* 70 */ instr!(bvs, rel, 2),
@@ -697,7 +697,7 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* AF */ Option::None,
 		
 		/* B0 */ instr!(bcs, rel, 2),
-		/* B1 */ Option::None,
+		/* B1 */ instr!(lda, idy, 5),
 		/* B2 */ Option::None,
 		/* B3 */ Option::None,
 		/* B4 */ Option::None,
@@ -725,9 +725,9 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* C9 */ instr!(cmp, imm, 2),
 		/* CA */ instr!(dex, imp, 2),
 		/* CB */ Option::None,
-		/* CC */ Option::None,
-		/* CD */ Option::None,
-		/* CE */ Option::None,
+		/* CC */ instr!(cpy, abs, 4),
+		/* CD */ instr!(cmp, abs, 4),
+		/* CE */ instr!(dec, abs, 6),
 		/* CF */ Option::None,
 
 		/* D0 */ instr!(bne, rel, 2),
@@ -759,9 +759,9 @@ pub static INSTRUCTION_SET: [Option<Instruction>; 256] = [
 		/* E9 */ instr!(sbc, imm, 2),
 		/* EA */ instr!(nop, imp, 2),
 		/* EB */ Option::None,
-		/* EC */ Option::None,
-		/* ED */ Option::None,
-		/* EE */ Option::None,
+		/* EC */ instr!(cpx, abs, 4),
+		/* ED */ instr!(sbc, abs, 4),
+		/* EE */ instr!(inc, abs, 6),
 		/* EF */ Option::None,
 
 		/* F0 */ instr!(beq, rel, 2),

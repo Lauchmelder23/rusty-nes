@@ -34,14 +34,14 @@ impl CPU
 
 		self.fetch_type = FetchType::Mem;
 
-		print!("{: <30}", format!("${:04X}", self.absolute_addr));
+		print!("{: <40}", format!("${:04X}", self.absolute_addr));
 	}
 
 	pub fn acc(&mut self)
 	{
 		self.fetch_type = FetchType::Acc;
 
-		print!("{: <30}", "A");
+		print!("{: <40}", "A");
 	}
 
 	pub fn idx(&mut self)
@@ -58,7 +58,24 @@ impl CPU
 		self.absolute_addr = (hi << 8) | lo;
 		self.fetch_type = FetchType::Mem;
 
-		print!("{: <30}", format!("(${:02X},X) @ [${:02X}] = ${:04X} = {:02X}", zpg_addr.wrapping_sub(self.x), zpg_addr, self.absolute_addr, bus.borrow().read_cpu(self.absolute_addr)));
+		print!("{: <40}", format!("(${:02X},X) @ [${:02X}] = ${:04X} = {:02X}", zpg_addr.wrapping_sub(self.x), zpg_addr, self.absolute_addr, bus.borrow().read_cpu(self.absolute_addr)));
+	}
+
+	pub fn idy(&mut self)
+	{
+		let bus = self.bus.upgrade().unwrap();
+		
+		let zpg_addr = bus.borrow().read_cpu(self.pc);
+		self.pc += 1;
+
+		let lo = bus.borrow().read_cpu(zpg_addr as u16) as u16;
+		let hi = bus.borrow().read_cpu(zpg_addr.wrapping_add(1) as u16) as u16;
+
+		let target_addr = (hi << 8) | lo;
+		self.absolute_addr = target_addr.wrapping_add(self.y as u16);
+		self.fetch_type = FetchType::Mem;
+
+		print!("{: <40}", format!("(${:02X}),Y @ [${:04X} + Y] = ${:04X} = {:02X}", zpg_addr, target_addr, self.absolute_addr, bus.borrow().read_cpu(self.absolute_addr)));
 	}
 
 	pub fn imm(&mut self)
@@ -70,12 +87,12 @@ impl CPU
 
 		self.fetch_type = FetchType::Mem;
 
-		print!("{: <30}", format!("#${:02X}", bus.borrow().read_cpu(self.absolute_addr)));
+		print!("{: <40}", format!("#${:02X}", bus.borrow().read_cpu(self.absolute_addr)));
 	}
 
 	pub fn imp(&mut self)
 	{
-		print!("{: <30}", "");
+		print!("{: <40}", "");
 	}
 
 	pub fn rel(&mut self)
@@ -85,7 +102,7 @@ impl CPU
 		self.relative_addr = bus.borrow().read_cpu(self.pc) as i8;
 		self.pc += 1;
 
-		print!("{: <30}", format!("${:02X}", self.relative_addr));
+		print!("{: <40}", format!("${:02X}", self.relative_addr));
 	}
 
 	pub fn zpg(&mut self)
@@ -97,6 +114,6 @@ impl CPU
 
 		self.fetch_type = FetchType::Mem;
 
-		print!("{: <30}", format!("${:02X} = {:02X}", self.absolute_addr, bus.borrow().read_cpu(self.absolute_addr)))
+		print!("{: <40}", format!("${:02X} = {:02X}", self.absolute_addr, bus.borrow().read_cpu(self.absolute_addr)))
 	}
 }
