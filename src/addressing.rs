@@ -1,5 +1,25 @@
 use crate::cpu::{CPU, FetchType};
 
+#[macro_export]
+macro_rules! instr_size
+{
+	(acc) => { 1 };
+	(abs) => { 3 };
+	(abx) => { 3 };
+	(aby) => { 3 };
+	(imm) => { 1 };
+	(imp) => { 1 };
+	(ind) => { 3 };
+	(idx) => { 3 };
+	(idy) => { 3 };
+	(rel) => { 2 };
+	(zpg) => { 2 };
+	(zpx) => { 2 };
+	(zpy) => { 2 };
+}
+
+pub type AddrFn = fn(&mut CPU);
+
 impl CPU
 {
 	pub fn abs(&mut self)
