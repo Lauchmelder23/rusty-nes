@@ -33,10 +33,30 @@ macro_rules! abs_indexed_addr
 			let fetched_addr = (hi << 8) | lo;
 			self.absolute_addr = fetched_addr.wrapping_add(self.$register as u16);
 
+			self.additional_cycles = ((fetched_addr & 0xFF00) != (self.absolute_addr & 0xFF00)) as u8;
 
 			self.fetch_type = FetchType::Mem;
 
 			print!("{: <40}", format!("${:04X},{} @ ${:04X}", fetched_addr, stringify!($register).to_uppercase(), self.absolute_addr));
+		}
+	}
+}
+
+macro_rules! zpg_indexed_addr
+{
+	($name: ident, $register: ident) => 
+	{
+		pub fn $name(&mut self) 
+		{
+			let bus = self.bus.upgrade().unwrap();
+
+			let fetched_addr = bus.borrow().read_cpu(self.pc);
+			self.absolute_addr = fetched_addr.wrapping_add(self.$register) as u16;
+			self.pc += instr_size!($name) - 1;
+
+			self.fetch_type = FetchType::Mem;
+
+			print!("{: <40}", format!("${:02X},{} @ ${:04X}", fetched_addr, stringify!($register).to_uppercase(), self.absolute_addr));
 		}
 	}
 }
@@ -100,9 +120,7 @@ impl CPU
 		let target_addr = (hi << 8) | lo;
 		self.absolute_addr = target_addr.wrapping_add(self.y as u16);
 
-		if (target_addr & 0xFF00) != (self.absolute_addr & 0xFF00) {
-			self.cycle += 1;
-		}
+		self.additional_cycles = ((target_addr & 0xFF00) != (self.absolute_addr & 0xFF00)) as u8;
 
 		self.fetch_type = FetchType::Mem;
 
@@ -168,4 +186,8 @@ impl CPU
 
 		print!("{: <40}", format!("${:02X} = {:02X}", self.absolute_addr, bus.borrow().read_cpu(self.absolute_addr)))
 	}
+
+	zpg_indexed_addr!(zpx, x);
+	zpg_indexed_addr!(zpy, y);
+
 }

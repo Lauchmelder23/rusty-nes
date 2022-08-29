@@ -12,7 +12,8 @@ pub enum FetchType
 
 pub struct CPU
 {
-	pub cycle: u8,
+	cycle: u8,
+	pub additional_cycles: u8,
 	total_cycles: u64,
 
 	pub absolute_addr: u16,
@@ -35,6 +36,7 @@ impl CPU
 	{
 		CPU {
 			cycle: 0,
+			additional_cycles: 0,
 			total_cycles: 0,
 
 			absolute_addr: 0,
@@ -110,7 +112,8 @@ impl CPU
 		(instr.addressing)(self);
 		(instr.action)(self);
 
-		self.cycle += instr.cycles;
+		self.cycle += instr.cycles + self.additional_cycles;
+		self.additional_cycles = 0;
 
 		println!("A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} CYC:{}", self.acc, self.x, self.y, self.p, self.sp, self.total_cycles);
 	}
