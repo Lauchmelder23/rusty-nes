@@ -4,6 +4,7 @@ mod cpu;
 mod instructions;
 mod addressing;
 mod cartridge;
+mod mnemonic;
 
 use nes::NES;
 

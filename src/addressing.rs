@@ -24,6 +24,23 @@ impl CPU
 		print!("{: <30}", "A");
 	}
 
+	pub fn idx(&mut self)
+	{
+		let bus = self.bus.upgrade().unwrap();
+		
+		let mut zpg_addr = bus.borrow().read_cpu(self.pc);
+		self.pc += 1;
+
+		zpg_addr = zpg_addr.wrapping_add(self.x);
+		let lo = bus.borrow().read_cpu(zpg_addr as u16) as u16;
+		let hi = bus.borrow().read_cpu(zpg_addr.wrapping_add(1) as u16) as u16;
+
+		self.absolute_addr = (hi << 8) | lo;
+		self.fetch_type = FetchType::Mem;
+
+		print!("{: <30}", format!("(${:02X},X) @ [${:02X}] = ${:04X} = {:02X}", zpg_addr.wrapping_sub(self.x), zpg_addr, self.absolute_addr, bus.borrow().read_cpu(self.absolute_addr)));
+	}
+
 	pub fn imm(&mut self)
 	{
 		let bus = self.bus.upgrade().unwrap();

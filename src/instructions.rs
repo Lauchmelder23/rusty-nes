@@ -325,7 +325,6 @@ impl CPU
 	bitshift_fn!(rol, <<, true);
 	bitshift_fn!(ror, >>, true);
 
-
 	pub fn adc(&mut self)
 	{
 		let value = self.fetch() as u16;
