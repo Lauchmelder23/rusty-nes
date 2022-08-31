@@ -6,10 +6,6 @@ add_library(renderer STATIC
 	context.c
 )
 
-target_include_directories(renderer PUBLIC
-	${CMAKE_CURRENT_LIST_DIR}
-)
-
 target_link_libraries(renderer PRIVATE
 	glad
 )

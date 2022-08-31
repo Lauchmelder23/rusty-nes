@@ -1,5 +1,3 @@
-#include "context.h"
-
 #include <assert.h>
 #include <stdio.h>
 #include <glad/glad.h>
@@ -9,8 +7,7 @@ static void*(*_gl_loader)(void*, const char*) = NULL;
 
 void* load_gl_proc(const char* name)
 {
-	assert(_glfw);
-	assert(_gl_loader);
+	assert(_glfw && _gl_loader);
 
 	return _gl_loader(_glfw, name);
 }
@@ -29,6 +26,8 @@ int init_opengl(void* glfw, void*(*gl_loader)(void*, const char*))
 
 void clear()
 {
+	assert(_glfw && _gl_loader);
+
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 }
