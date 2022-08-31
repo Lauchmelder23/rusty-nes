@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
-use crate::bus::Bus;
-use crate::cpu::CPU;
+use crate::nes::bus::Bus;
+use crate::nes::cpu::CPU;
 
 pub struct NES
 {
@@ -28,10 +28,10 @@ impl NES
 	pub fn powerup(&self)
 	{
 		self.cpu.borrow_mut().powerup();
+	}
 
-		loop
-		{
-			self.cpu.borrow_mut().cycle();
-		}
+	pub fn clock(&self)
+	{
+		self.cpu.borrow_mut().cycle();
 	}
 }

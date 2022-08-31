@@ -1,4 +1,4 @@
-use crate::cpu::{CPU, FetchType};
+use crate::nes::cpu::{CPU, FetchType};
 
 #[macro_export]
 macro_rules! instr_size

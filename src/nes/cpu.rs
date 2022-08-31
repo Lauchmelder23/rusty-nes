@@ -1,8 +1,8 @@
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
-use crate::bus::Bus;
-use crate::instructions::INSTRUCTION_SET;
+use crate::nes::bus::Bus;
+use crate::nes::instructions::INSTRUCTION_SET;
 
 pub enum FetchType
 {

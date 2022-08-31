@@ -1,8 +1,8 @@
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
 
-use crate::cpu::CPU;
-use crate::cartridge::Cartridge;
+use crate::nes::cpu::CPU;
+use crate::nes::cartridge::Cartridge;
 
 pub struct Bus
 {

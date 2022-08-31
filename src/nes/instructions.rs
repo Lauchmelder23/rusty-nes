@@ -1,7 +1,7 @@
-use crate::cpu::{CPU, FetchType};
-use crate::bus::Bus;
-use crate::addressing::AddrFn;
-use crate::mnemonic::Mnemonic;
+use crate::nes::cpu::{CPU, FetchType};
+use crate::nes::bus::Bus;
+use crate::nes::addressing::AddrFn;
+use crate::nes::mnemonic::Mnemonic;
 use crate::instr_size;
 use std::cell::Ref;
 
