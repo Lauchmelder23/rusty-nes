@@ -1,7 +1,7 @@
 mod nes;
 mod renderer;
 
-use std::ffi::{c_void, CStr};
+use std::ffi::{CStr};
 use glfw::{Context};
 
 use nes::nes::NES;
@@ -23,8 +23,9 @@ fn main() {
     unsafe 
     {
         res = context::init_opengl(
-            &mut glfw as *mut _ as *mut c_void, 
-            |glfw, name| (&mut *(glfw as *mut glfw::Glfw)).get_proc_address_raw(CStr::from_ptr(name).to_str().unwrap()));
+            &mut glfw as *mut _ as *mut _, 
+            |glfw, name| (&mut *(glfw as *mut glfw::Glfw)).get_proc_address_raw(CStr::from_ptr(name).to_str().unwrap())
+        );
     }
 
     if res != 0 {
