@@ -43,6 +43,7 @@ fn main() {
             }
         }
 
+        nes.single_frame();
         unsafe { context::clear(); }
 
         window.swap_buffers();

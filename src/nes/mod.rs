@@ -1,6 +1,7 @@
 pub mod nes;
 
 mod cpu;
+mod ppu;
 mod bus;
 mod addressing;
 mod instructions;

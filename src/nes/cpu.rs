@@ -71,19 +71,25 @@ impl CPU
 		self.pc = 0xC000;
 	}
 
-	pub fn cycle(&mut self)
+	pub fn cycle(&mut self) -> bool
 	{
 		self.total_cycles += 1;
 
 		if self.cycle > 0
 		{
 			self.cycle -= 1;
-			return;
+			return false;
 		}
 
 		self.execute();
 
 		self.cycle -= 1;
+		true
+	}
+
+	pub fn sync(&self) -> bool
+	{
+		self.cycle == 0
 	}
 
 	fn execute(&mut self)
@@ -115,7 +121,7 @@ impl CPU
 		self.cycle += instr.cycles + self.additional_cycles;
 		self.additional_cycles = 0;
 
-		println!("A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} CYC:{}", self.acc, self.x, self.y, self.p, self.sp, self.total_cycles);
+		print!("A:{:02X} X:{:02X} Y:{:02X} P:{:02X} SP:{:02X} CYC:{} ", self.acc, self.x, self.y, self.p, self.sp, self.total_cycles);
 	}
 
 }
