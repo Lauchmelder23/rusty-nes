@@ -42,6 +42,7 @@ impl Bus
 		match addr
 		{
 			0..=0x1FFF 		=> self.ram[(addr & 0x7FF) as usize],
+			0x2000..=0x3FFF => self.ppu.upgrade().unwrap().borrow_mut().get_regsiter(addr & 0x7),
 			0x8000..=0xFFFF => self.cartridge.read_prg(addr & 0x7FFF),
 
 			_ => panic!("Tried to access invalid memory address ${:04X}", addr)
@@ -53,9 +54,10 @@ impl Bus
 		match addr 
 		{
 			0..=0x1FFF 		=> self.ram[(addr & 0x7FF) as usize] = val,
+			0x2000..=0x3FFF => self.ppu.upgrade().unwrap().borrow_mut().set_regsiter(addr & 0x7, val),
 			0x8000..=0xFFFF => self.cartridge.write_prg(addr & 0x7FFF, val),
 
-			_ => panic!("Tried to access invalid memory address ${:04X}", addr)
+			_ => { }
 		}
 	}
 }

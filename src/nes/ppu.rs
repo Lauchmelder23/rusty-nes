@@ -24,6 +24,22 @@ impl PPU
 		}
 	}
 
+	pub fn set_regsiter(&mut self, addr: u16, val: u8)
+	{
+		match addr 
+		{
+			_ => panic!("Register not implemented")
+		}
+	}
+
+	pub fn get_regsiter(&mut self, addr: u16) -> u8
+	{
+		match addr 
+		{
+			_ => panic!("Register not implemented")
+		}
+	}
+
 	pub fn dot(&mut self)
 	{
 		self.screen_x += 1;
